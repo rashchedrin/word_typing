@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Typing Practice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="text"], input[type="password"], textarea, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            margin: 0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .practice-area {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .word-display {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            color: #495057;
+        }
+
+        .practice-input {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .correct {
+            background-color: #d4edda;
+            border-color: #28a745;
+        }
+
+        .incorrect {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Word Typing Practice</h1>
+        
+        <div class="form-group">
+            <label for="wordInput">Word to Practice:</label>
+            <input type="text" id="wordInput" value="alphabet" placeholder="Enter word to practice">
+        </div>
+        
+        <div class="form-group">
+            <label for="mistakeAction">Action on Mistake:</label>
+            <select id="mistakeAction">
+                <option value="nothing">Nothing (let user backspace)</option>
+                <option value="prevent">Don't add wrong letter</option>
+                <option value="erase" selected>Erase all text</option>
+            </select>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="soundEnabled">
+            <label for="soundEnabled" class="checkbox-label">Sound on mistake</label>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="hideText">
+            <label for="hideText" class="checkbox-label">Hide text</label>
+        </div>
+        
+        <div class="practice-area">
+            <div class="word-display" id="wordDisplay">alphabet</div>
+            <textarea id="practiceInput" class="practice-input" placeholder="Start typing the word above..."></textarea>
+            <input type="password" id="practiceInputPassword" class="practice-input" placeholder="Start typing the word above..." style="display: none;">
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="wordsCompleted">0</div>
+                <div class="stat-label">Words Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="completionRate">100%</div>
+                <div class="stat-label">Completion Rate</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="correctCount">0</div>
+                <div class="stat-label">Correct</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="mistakeCount">0</div>
+                <div class="stat-label">Mistakes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="accuracy">100%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Audio context for generating sounds
+        let audioContext;
+        let correctCount = 0;
+        let mistakeCount = 0;
+        let wordsCompleted = 0;
+        let wordAttempts = 0; // Track total word attempts (completed + failed)
+
+        // Initialize audio context on first user interaction
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Generate mistake sound
+        function playMistakeSound() {
+            if (!document.getElementById('soundEnabled').checked) return;
+            
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        // Generate success sound
+        function playSuccessSound() {
+            if (!document.getElementById('soundEnabled').checked) return;
+            
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('wordsCompleted').textContent = wordsCompleted;
+            document.getElementById('correctCount').textContent = correctCount;
+            document.getElementById('mistakeCount').textContent = mistakeCount;
+            
+            const total = correctCount + mistakeCount;
+            const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 100;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            
+            // Calculate completion rate (successful word completions vs total word attempts)
+            const completionRate = wordAttempts > 0 ? Math.round((wordsCompleted / wordAttempts) * 100) : 100;
+            document.getElementById('completionRate').textContent = completionRate + '%';
+        }
+
+        // Get references to elements
+        const wordInput = document.getElementById('wordInput');
+        const wordDisplay = document.getElementById('wordDisplay');
+        const practiceInput = document.getElementById('practiceInput');
+        const practiceInputPassword = document.getElementById('practiceInputPassword');
+        const mistakeAction = document.getElementById('mistakeAction');
+        const hideText = document.getElementById('hideText');
+
+        // Update word display when word input changes
+        wordInput.addEventListener('input', function() {
+            wordDisplay.textContent = this.value || 'alphabet';
+            practiceInput.value = '';
+            practiceInputPassword.value = '';
+            practiceInput.className = 'practice-input';
+            practiceInputPassword.className = 'practice-input';
+        });
+
+        // Handle hide text toggle
+        hideText.addEventListener('change', function() {
+            const inputType = this.checked ? 'password' : 'text';
+            wordInput.type = inputType;
+            
+            // Switch between textarea and password input
+            if (this.checked) {
+                wordDisplay.style.display = 'none';
+                practiceInput.style.display = 'none';
+                practiceInputPassword.style.display = 'block';
+                // Copy current value and focus
+                practiceInputPassword.value = practiceInput.value;
+                practiceInputPassword.focus();
+            } else {
+                wordDisplay.style.display = 'block';
+                practiceInput.style.display = 'block';
+                practiceInputPassword.style.display = 'none';
+                // Copy current value and focus
+                practiceInput.value = practiceInputPassword.value;
+                practiceInput.focus();
+            }
+        });
+
+        // Shared typing practice logic
+        function handleTypingInput(inputElement) {
+            const targetWord = wordDisplay.textContent;
+            const currentInput = inputElement.value;
+            const mistakeMode = mistakeAction.value;
+            
+            // Check if current input matches the beginning of target word (case sensitive)
+            const isCorrectSoFar = targetWord.startsWith(currentInput);
+            
+            if (!isCorrectSoFar && currentInput.length > 0) {
+                // Mistake detected
+                mistakeCount++;
+                playMistakeSound();
+                
+                switch (mistakeMode) {
+                    case 'nothing':
+                        // Do nothing, let user handle it
+                        inputElement.className = 'practice-input incorrect';
+                        break;
+                    case 'prevent':
+                        // Remove the last character that was wrong
+                        inputElement.value = currentInput.slice(0, -1);
+                        break;
+                    case 'erase':
+                        // Clear all text - this counts as a failed word attempt
+                        inputElement.value = '';
+                        wordAttempts++;
+                        break;
+                }
+            } else {
+                // Input is correct so far
+                if (currentInput.length > 0) {
+                    correctCount++;
+                }
+                
+                if (currentInput === targetWord) {
+                    // Word completed successfully
+                    wordsCompleted++;
+                    wordAttempts++;
+                    inputElement.className = 'practice-input correct';
+                    playSuccessSound();
+                    
+                    // Clear after a short delay to show success
+                    setTimeout(() => {
+                        inputElement.value = '';
+                        inputElement.className = 'practice-input';
+                    }, 1000);
+                } else {
+                    inputElement.className = 'practice-input';
+                }
+            }
+            
+            updateStats();
+        }
+
+        // Apply typing logic to both inputs
+        practiceInput.addEventListener('input', function(e) {
+            handleTypingInput(this);
+        });
+
+        practiceInputPassword.addEventListener('input', function(e) {
+            handleTypingInput(this);
+        });
+
+        // Handle backspace and other keys for both inputs
+        practiceInput.addEventListener('keydown', function(e) {
+            // Initialize audio context on any key press
+            initAudio();
+        });
+
+        practiceInputPassword.addEventListener('keydown', function(e) {
+            // Initialize audio context on any key press
+            initAudio();
+        });
+
+        // Reset stats when word changes
+        wordInput.addEventListener('input', function() {
+            correctCount = 0;
+            mistakeCount = 0;
+            wordsCompleted = 0;
+            wordAttempts = 0;
+            updateStats();
+        });
+
+        // Initialize
+        updateStats();
+    </script>
+</body>
+</html>
