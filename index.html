@@ -129,6 +129,53 @@
             border-color: #dc3545;
         }
 
+        .success-flash {
+            animation: successFlash 0.3s ease-out;
+        }
+
+        .error-flash {
+            animation: errorFlash 0.3s ease-out;
+        }
+
+        @keyframes successFlash {
+            0% { 
+                background-color: #28a745;
+                border-color: #1e7e34;
+                transform: scale(1.02);
+                box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
+            }
+            100% { 
+                background-color: #d4edda;
+                border-color: #28a745;
+                transform: scale(1);
+                box-shadow: none;
+            }
+        }
+
+        @keyframes errorFlash {
+            0% { 
+                background-color: #dc3545;
+                border-color: #c82333;
+                transform: translateX(-5px);
+                box-shadow: 0 0 20px rgba(220, 53, 69, 0.6);
+            }
+            25% { 
+                transform: translateX(5px);
+            }
+            50% { 
+                transform: translateX(-3px);
+            }
+            75% { 
+                transform: translateX(3px);
+            }
+            100% { 
+                background-color: #f8d7da;
+                border-color: #dc3545;
+                transform: translateX(0);
+                box-shadow: none;
+            }
+        }
+
         .stats {
             display: flex;
             justify-content: space-between;
@@ -174,7 +221,7 @@
         
         <div class="checkbox-group">
             <input type="checkbox" id="soundEnabled">
-            <label for="soundEnabled" class="checkbox-label">Sound on mistake</label>
+            <label for="soundEnabled" class="checkbox-label">Sound on</label>
         </div>
         
         <div class="checkbox-group">
@@ -272,6 +319,28 @@
             oscillator.stop(audioContext.currentTime + 0.3);
         }
 
+        // Generate subtle keystroke sound
+        function playKeystrokeSound() {
+            if (!document.getElementById('soundEnabled').checked) return;
+            
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Very subtle, short click sound
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime); // Very quiet
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05); // Very short
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.05);
+        }
+
         // Update statistics
         function updateStats() {
             document.getElementById('wordsCompleted').textContent = wordsCompleted;
@@ -341,10 +410,13 @@
                 mistakeCount++;
                 playMistakeSound();
                 
+                // Add error flash animation
+                inputElement.className = 'practice-input incorrect error-flash';
+                cleanupAnimationClasses(inputElement);
+                
                 switch (mistakeMode) {
                     case 'nothing':
                         // Do nothing, let user handle it
-                        inputElement.className = 'practice-input incorrect';
                         break;
                     case 'prevent':
                         // Remove the last character that was wrong
@@ -360,26 +432,36 @@
                 // Input is correct so far
                 if (currentInput.length > 0) {
                     correctCount++;
+                    // Play subtle keystroke sound for correct input
+                    playKeystrokeSound();
                 }
                 
                 if (currentInput === targetWord) {
                     // Word completed successfully
                     wordsCompleted++;
                     wordAttempts++;
-                    inputElement.className = 'practice-input correct';
+                    inputElement.className = 'practice-input correct success-flash';
                     playSuccessSound();
                     
-                    // Clear after a short delay to show success
+                    // Clear immediately
+                    inputElement.value = '';
+                    // Reset class after animation completes
                     setTimeout(() => {
-                        inputElement.value = '';
                         inputElement.className = 'practice-input';
-                    }, 1000);
+                    }, 300);
                 } else {
                     inputElement.className = 'practice-input';
                 }
             }
             
             updateStats();
+        }
+
+        // Clean up animation classes
+        function cleanupAnimationClasses(inputElement) {
+            setTimeout(() => {
+                inputElement.className = inputElement.className.replace(/\s*(error-flash|success-flash)/g, '');
+            }, 300);
         }
 
         // Apply typing logic to both inputs
