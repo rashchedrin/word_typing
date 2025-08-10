@@ -27,7 +27,7 @@
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             padding: 40px;
-            max-width: 600px;
+            max-width: 720px; /* 20% wider: 600px * 1.2 = 720px */
             width: 100%;
         }
 
@@ -110,6 +110,10 @@
             margin-bottom: 15px;
             letter-spacing: 2px;
             color: #495057;
+            /* Auto-scale font for long words */
+            font-size: clamp(16px, 4vw, 24px);
+            word-break: break-all;
+            overflow-wrap: break-word;
         }
 
         .practice-input {
