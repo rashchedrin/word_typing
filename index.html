@@ -116,6 +116,18 @@
             overflow-wrap: break-word;
         }
 
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            color: #666;
+            border: 2px solid #e9ecef;
+        }
+
         .practice-input {
             font-family: 'Courier New', monospace;
             font-size: 24px;
@@ -203,6 +215,12 @@
             color: #666;
             font-size: 14px;
         }
+
+        .stat-sublabel {
+            color: #888;
+            font-size: 12px;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -229,12 +247,18 @@
         </div>
         
         <div class="checkbox-group">
+            <input type="checkbox" id="mistakeFeedback" checked>
+            <label for="mistakeFeedback" class="checkbox-label">Mistake feedback on</label>
+        </div>
+        
+        <div class="checkbox-group">
             <input type="checkbox" id="hideText">
             <label for="hideText" class="checkbox-label">Hide text</label>
         </div>
         
         <div class="practice-area">
             <div class="word-display" id="wordDisplay">alphabet</div>
+            <div class="timer-display" id="timerDisplay">0.00s</div>
             <textarea id="practiceInput" class="practice-input" placeholder="Start typing the word above..."></textarea>
             <input type="password" id="practiceInputPassword" class="practice-input" placeholder="Start typing the word above..." style="display: none;">
         </div>
@@ -247,6 +271,16 @@
             <div class="stat-item">
                 <div class="stat-value" id="completionRate">100%</div>
                 <div class="stat-label">Completion Rate</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="bestTime">-</div>
+                <div class="stat-label">Best Speed (sym/s)</div>
+                <div class="stat-sublabel" id="bestTimeDisplay">-</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="medianTime">-</div>
+                <div class="stat-label">Median Speed (sym/s)</div>
+                <div class="stat-sublabel" id="medianTimeDisplay">-</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="correctCount">0</div>
@@ -270,6 +304,11 @@
         let mistakeCount = 0;
         let wordsCompleted = 0;
         let wordAttempts = 0; // Track total word attempts (completed + failed)
+        
+        // Timing variables
+        let startTime = null;
+        let currentTimer = null;
+        let completionTimes = []; // Store all successful completion times in seconds
 
         // Initialize audio context on first user interaction
         function initAudio() {
@@ -280,7 +319,8 @@
 
         // Generate mistake sound
         function playMistakeSound() {
-            if (!document.getElementById('soundEnabled').checked) return;
+            if (!document.getElementById('soundEnabled').checked || 
+                !document.getElementById('mistakeFeedback').checked) return;
             
             initAudio();
             
@@ -345,6 +385,69 @@
             oscillator.stop(audioContext.currentTime + 0.05);
         }
 
+        // Generate new record sound
+        function playNewRecordSound() {
+            if (!document.getElementById('soundEnabled').checked) return;
+            
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Triumphant ascending melody
+            oscillator.frequency.setValueAtTime(523, audioContext.currentTime); // C5
+            oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.15); // E5
+            oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.3); // G5
+            oscillator.frequency.setValueAtTime(1047, audioContext.currentTime + 0.45); // C6
+            
+            gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.6);
+        }
+
+        // Timer functions
+        function startTimer() {
+            if (startTime === null) {
+                startTime = Date.now();
+                updateTimer();
+            }
+        }
+
+        function stopTimer() {
+            if (currentTimer) {
+                clearInterval(currentTimer);
+                currentTimer = null;
+            }
+        }
+
+        function resetTimer() {
+            stopTimer();
+            startTime = null;
+            document.getElementById('timerDisplay').textContent = '0.00s';
+        }
+
+        function updateTimer() {
+            if (currentTimer) clearInterval(currentTimer);
+            currentTimer = setInterval(() => {
+                if (startTime) {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    document.getElementById('timerDisplay').textContent = elapsed.toFixed(2) + 's';
+                }
+            }, 10); // Update every 10ms for smooth display
+        }
+
+        function calculateMedian(times) {
+            if (times.length === 0) return 0;
+            const sorted = [...times].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+        }
+
         // Update statistics
         function updateStats() {
             document.getElementById('wordsCompleted').textContent = wordsCompleted;
@@ -358,6 +461,32 @@
             // Calculate completion rate (successful word completions vs total word attempts)
             const completionRate = wordAttempts > 0 ? Math.round((wordsCompleted / wordAttempts) * 100) : 100;
             document.getElementById('completionRate').textContent = completionRate + '%';
+            
+            // Update timing stats
+            if (completionTimes.length > 0) {
+                const wordLength = wordDisplay.textContent.length;
+                
+                // Calculate speeds from times
+                const speeds = completionTimes.map(time => wordLength / time);
+                const bestSpeed = Math.max(...speeds);
+                const medianSpeed = calculateMedian(speeds);
+                
+                // Find best time (fastest completion)
+                const bestTime = Math.min(...completionTimes);
+                const medianTime = calculateMedian(completionTimes);
+                
+                document.getElementById('medianTime').textContent = medianSpeed.toFixed(1);
+                document.getElementById('bestTime').textContent = bestSpeed.toFixed(1);
+                
+                // Display times below speed labels
+                document.getElementById('bestTimeDisplay').textContent = `${bestTime.toFixed(2)}s`;
+                document.getElementById('medianTimeDisplay').textContent = `${medianTime.toFixed(2)}s`;
+            } else {
+                document.getElementById('medianTime').textContent = '-';
+                document.getElementById('bestTime').textContent = '-';
+                document.getElementById('bestTimeDisplay').textContent = '-';
+                document.getElementById('medianTimeDisplay').textContent = '-';
+            }
         }
 
         // Get references to elements
@@ -366,6 +495,7 @@
         const practiceInput = document.getElementById('practiceInput');
         const practiceInputPassword = document.getElementById('practiceInputPassword');
         const mistakeAction = document.getElementById('mistakeAction');
+        const mistakeFeedback = document.getElementById('mistakeFeedback');
         const hideText = document.getElementById('hideText');
 
         // Update word display when word input changes
@@ -375,6 +505,7 @@
             practiceInputPassword.value = '';
             practiceInput.className = 'practice-input';
             practiceInputPassword.className = 'practice-input';
+            resetTimer();
         });
 
         // Handle hide text toggle
@@ -406,31 +537,60 @@
             const currentInput = inputElement.value;
             const mistakeMode = mistakeAction.value;
             
+            // Start timer on first character
+            if (currentInput.length === 1 && startTime === null) {
+                startTimer();
+            }
+            
             // Check if current input matches the beginning of target word (case sensitive)
             const isCorrectSoFar = targetWord.startsWith(currentInput);
             
             if (!isCorrectSoFar && currentInput.length > 0) {
                 // Mistake detected
                 mistakeCount++;
-                playMistakeSound();
                 
-                // Add error flash animation
-                inputElement.className = 'practice-input incorrect error-flash';
-                cleanupAnimationClasses(inputElement);
-                
-                switch (mistakeMode) {
-                    case 'nothing':
-                        // Do nothing, let user handle it
-                        break;
-                    case 'prevent':
-                        // Remove the last character that was wrong
-                        inputElement.value = currentInput.slice(0, -1);
-                        break;
-                    case 'erase':
-                        // Clear all text - this counts as a failed word attempt
-                        inputElement.value = '';
-                        wordAttempts++;
-                        break;
+                // Only provide mistake feedback if enabled
+                if (document.getElementById('mistakeFeedback').checked) {
+                    playMistakeSound();
+                    inputElement.className = 'practice-input incorrect error-flash';
+                    cleanupAnimationClasses(inputElement);
+                    
+                    switch (mistakeMode) {
+                        case 'nothing':
+                            // Do nothing, let user handle it
+                            break;
+                        case 'prevent':
+                            // Remove the last character that was wrong
+                            inputElement.value = currentInput.slice(0, -1);
+                            break;
+                        case 'erase':
+                            // Clear all text - this counts as a failed word attempt and resets timer
+                            inputElement.value = '';
+                            wordAttempts++;
+                            resetTimer();
+                            break;
+                    }
+                } else {
+                    // No mistake feedback - treat like normal keystroke
+                    inputElement.className = 'practice-input';
+                    playKeystrokeSound(); // Play normal keystroke sound even on mistakes
+                    
+                    // Only apply mistake handling in "prevent" and "erase" modes when feedback is off
+                    switch (mistakeMode) {
+                        case 'nothing':
+                            // Do nothing, let user handle it
+                            break;
+                        case 'prevent':
+                            // Remove the last character that was wrong
+                            inputElement.value = currentInput.slice(0, -1);
+                            break;
+                        case 'erase':
+                            // Clear all text - this counts as a failed word attempt and resets timer
+                            inputElement.value = '';
+                            wordAttempts++;
+                            resetTimer();
+                            break;
+                    }
                 }
             } else {
                 // Input is correct so far
@@ -442,13 +602,26 @@
                 
                 if (currentInput === targetWord) {
                     // Word completed successfully
+                    const completionTime = (Date.now() - startTime) / 1000;
+                    const speed = targetWord.length / completionTime; // symbols per second
+                    
+                    completionTimes.push(completionTime);
+                    
+                    // Check if new record (best speed = lowest time for current word)
+                    const currentBestTime = completionTimes.length > 1 ? Math.min(...completionTimes) : completionTime;
+                    if (completionTime === currentBestTime) {
+                        playNewRecordSound();
+                    } else {
+                        playSuccessSound();
+                    }
+                    
                     wordsCompleted++;
                     wordAttempts++;
                     inputElement.className = 'practice-input correct success-flash';
-                    playSuccessSound();
                     
-                    // Clear immediately
+                    // Clear immediately and reset timer
                     inputElement.value = '';
+                    resetTimer();
                     // Reset class after animation completes
                     setTimeout(() => {
                         inputElement.className = 'practice-input';
@@ -494,6 +667,7 @@
             mistakeCount = 0;
             wordsCompleted = 0;
             wordAttempts = 0;
+            completionTimes = [];
             updateStats();
         });
 
