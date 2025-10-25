@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
+            line-height: 1.4;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -26,7 +26,7 @@
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
+            padding: 20px; /* Reduced from 40px */
             max-width: 720px; /* 20% wider: 600px * 1.2 = 720px */
             width: 100%;
         }
@@ -34,17 +34,17 @@
         h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 30px;
-            font-size: 2rem;
+            margin-bottom: 10px; /* Reduced from 30px */
+            font-size: 1.8rem; /* Reduced from 2rem */
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 10px; /* Reduced from 25px */
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 600;
             color: #555;
         }
@@ -78,7 +78,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* Reduced from 15px */
         }
 
         input[type="checkbox"] {
@@ -96,18 +96,18 @@
         .practice-area {
             background: #f8f9fa;
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
+            padding: 12px; /* Reduced from 15px */
+            margin-bottom: 10px; /* Reduced from 20px */
         }
 
         .word-display {
             font-family: 'Courier New', monospace;
             font-size: 24px;
             text-align: center;
-            padding: 20px;
+            padding: 15px; /* Reduced from 20px */
             background: #e9ecef;
             border-radius: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* Reduced from 15px */
             letter-spacing: 2px;
             color: #495057;
             /* Auto-scale font for long words */
@@ -120,10 +120,10 @@
             font-family: 'Courier New', monospace;
             font-size: 18px;
             text-align: center;
-            padding: 10px;
+            padding: 8px; /* Reduced from 10px */
             background: #f8f9fa;
             border-radius: 6px;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* Reduced from 15px */
             color: #666;
             border: 2px solid #e9ecef;
         }
@@ -196,9 +196,9 @@
             display: flex;
             justify-content: space-between;
             background: #f8f9fa;
-            padding: 15px;
+            padding: 12px; /* Reduced from 15px */
             border-radius: 8px;
-            margin-top: 20px;
+            margin-top: 12px; /* Reduced from 20px */
         }
 
         .stat-item {
@@ -274,14 +274,22 @@
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="bestTime">-</div>
-                <div class="stat-label">Best Speed (sym/s)</div>
+                <div class="stat-label">Best Speed<br>(sym/s)</div>
                 <div class="stat-sublabel" id="bestTimeDisplay">-</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="medianTime">-</div>
-                <div class="stat-label">Median Speed (sym/s)</div>
+                <div class="stat-label">Median Speed<br>(sym/s)</div>
                 <div class="stat-sublabel" id="medianTimeDisplay">-</div>
             </div>
+            <div class="stat-item">
+                <div class="stat-value" id="lastTime">-</div>
+                <div class="stat-label">Last Speed<br>(sym/s)</div>
+                <div class="stat-sublabel" id="lastTimeDisplay">-</div>
+            </div>
+        </div>
+        
+        <div class="stats">
             <div class="stat-item">
                 <div class="stat-value" id="correctCount">0</div>
                 <div class="stat-label">Correct</div>
@@ -481,11 +489,19 @@
                 // Display times below speed labels
                 document.getElementById('bestTimeDisplay').textContent = `${bestTime.toFixed(2)}s`;
                 document.getElementById('medianTimeDisplay').textContent = `${medianTime.toFixed(2)}s`;
+                
+                // Update last completion stats
+                const lastCompletionTime = completionTimes[completionTimes.length - 1];
+                const lastSpeed = wordLength / lastCompletionTime;
+                document.getElementById('lastTime').textContent = lastSpeed.toFixed(1);
+                document.getElementById('lastTimeDisplay').textContent = `${lastCompletionTime.toFixed(2)}s`;
             } else {
                 document.getElementById('medianTime').textContent = '-';
                 document.getElementById('bestTime').textContent = '-';
                 document.getElementById('bestTimeDisplay').textContent = '-';
                 document.getElementById('medianTimeDisplay').textContent = '-';
+                document.getElementById('lastTime').textContent = '-';
+                document.getElementById('lastTimeDisplay').textContent = '-';
             }
         }
 
@@ -674,5 +690,6 @@
         // Initialize
         updateStats();
     </script>
+    <p><a href="https://rashchedrin.github.io/">My other pages</a></p>
 </body>
 </html>
