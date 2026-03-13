@@ -135,6 +135,19 @@
             letter-spacing: 2px;
         }
 
+        .typed-letter {
+            color: #000000;
+        }
+
+        .current-letter {
+            text-decoration: underline;
+        }
+
+        .mistyped-letter {
+            color: #dc3545;
+            text-decoration: line-through;
+        }
+
         .correct {
             background-color: #d4edda;
             border-color: #28a745;
@@ -229,7 +242,7 @@
         
         <div class="form-group">
             <label for="wordInput">Word to Practice:</label>
-            <input type="text" id="wordInput" value="alphabet" placeholder="Enter word to practice">
+            <input type="text" id="wordInput" value="abcdefghijklmnopqrstuvwxyz" placeholder="Enter word to practice">
         </div>
         
         <div class="form-group">
@@ -257,7 +270,7 @@
         </div>
         
         <div class="practice-area">
-            <div class="word-display" id="wordDisplay">alphabet</div>
+            <div class="word-display" id="wordDisplay">abcdefghijklmnopqrstuvwxyz</div>
             <div class="timer-display" id="timerDisplay">0.00s</div>
             <textarea id="practiceInput" class="practice-input" placeholder="Start typing the word above..."></textarea>
             <input type="password" id="practiceInputPassword" class="practice-input" placeholder="Start typing the word above..." style="display: none;">
@@ -517,7 +530,7 @@
 
         // Update word display when word input changes
         wordInput.addEventListener('input', function() {
-            wordDisplay.textContent = this.value || 'alphabet';
+            wordDisplay.textContent = this.value || 'abcdefghijklmnopqrstuvwxyz';
             practiceInput.value = '';
             practiceInputPassword.value = '';
             practiceInput.className = 'practice-input';
@@ -545,12 +558,76 @@
                 // Copy current value and focus
                 practiceInput.value = practiceInputPassword.value;
                 practiceInput.focus();
+                updateWordDisplayHighlight(practiceInput.value);
             }
         });
 
+        function updateWordDisplayHighlight(currentInput) {
+            const targetWord = wordInput.value || 'abcdefghijklmnopqrstuvwxyz';
+            if (hideText.checked) {
+                return;
+            }
+
+            let highlightedHtml = '';
+
+            if (mistakeAction.value === 'nothing') {
+                // "Let user backspace" mode: insert mistakes rather than overriding target letters
+                let targetIndex = 0;
+
+                for (let typedIndex = 0; typedIndex < currentInput.length; typedIndex++) {
+                    const typedCharacter = currentInput[typedIndex];
+                    const expectedCharacter = targetIndex < targetWord.length ? targetWord[targetIndex] : '';
+
+                    if (expectedCharacter && typedCharacter === expectedCharacter) {
+                        highlightedHtml += '<span class="typed-letter">' + typedCharacter + '</span>';
+                        targetIndex++;
+                    } else {
+                        highlightedHtml += '<span class="mistyped-letter">' + typedCharacter + '</span>';
+                    }
+                }
+
+                if (targetIndex < targetWord.length) {
+                    highlightedHtml += '<span class="current-letter">' + targetWord[targetIndex] + '</span>';
+                    targetIndex++;
+                }
+
+                for (; targetIndex < targetWord.length; targetIndex++) {
+                    highlightedHtml += targetWord[targetIndex];
+                }
+            } else {
+                // Other modes: we only ever show the target word, with progress as a simple prefix
+                const prefixCorrectLength = (() => {
+                    let length = 0;
+                    while (
+                        length < targetWord.length &&
+                        length < currentInput.length &&
+                        targetWord[length] === currentInput[length]
+                    ) {
+                        length++;
+                    }
+                    return length;
+                })();
+
+                const currentLetterIndex = prefixCorrectLength < targetWord.length ? prefixCorrectLength : -1;
+
+                for (let letterIndex = 0; letterIndex < targetWord.length; letterIndex++) {
+                    const letterCharacter = targetWord[letterIndex];
+                    if (letterIndex < prefixCorrectLength) {
+                        highlightedHtml += '<span class="typed-letter">' + letterCharacter + '</span>';
+                    } else if (letterIndex === currentLetterIndex) {
+                        highlightedHtml += '<span class="current-letter">' + letterCharacter + '</span>';
+                    } else {
+                        highlightedHtml += letterCharacter;
+                    }
+                }
+            }
+
+            wordDisplay.innerHTML = highlightedHtml;
+        }
+
         // Shared typing practice logic
         function handleTypingInput(inputElement) {
-            const targetWord = wordDisplay.textContent;
+            const targetWord = wordDisplay.textContent.replace(/<[^>]*>/g, '');
             const currentInput = inputElement.value;
             const mistakeMode = mistakeAction.value;
             
@@ -648,6 +725,8 @@
                 }
             }
             
+            const normalizedCurrentInput = inputElement.value;
+            updateWordDisplayHighlight(normalizedCurrentInput);
             updateStats();
         }
 
@@ -686,10 +765,12 @@
             wordAttempts = 0;
             completionTimes = [];
             updateStats();
+            updateWordDisplayHighlight('');
         });
 
         // Initialize
         updateStats();
+        updateWordDisplayHighlight('');
     </script>
 </body>
 </html>
