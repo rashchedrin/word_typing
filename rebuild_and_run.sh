@@ -5,7 +5,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-cmake -S . -B build
-make -C build clean
-make -C build
+rm -f build/word_typing_practice_tui
+"$SCRIPT_DIR/build.sh"
 exec ./build/word_typing_practice_tui

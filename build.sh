@@ -5,5 +5,5 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-cmake -S . -B build
-make -C build
+mkdir -p build
+g++ -std=c++20 -o build/word_typing_practice_tui main.cpp
