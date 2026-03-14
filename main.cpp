@@ -556,9 +556,6 @@ private:
 
     /** Returns the effective practice word. side-effects: none. */
     std::string getEffectiveTargetWord() const {
-        if (configured_word_utf8_.empty()) {
-            return std::string(DEFAULT_WORD);
-        }
         return configured_word_utf8_;
     }
 
@@ -945,14 +942,6 @@ private:
         return output_stream.str();
     }
 
-    /** Returns the current input display text. side-effects: none. */
-    std::string renderInputBuffer() const {
-        if (hide_text_) {
-            return maskUtf8Text(practice_input_utf8_);
-        }
-        return practice_input_utf8_;
-    }
-
     /** Returns the current input-status label. side-effects: none. */
     std::string renderInputStatusLabel() const {
         switch (flash_kind_) {
@@ -993,11 +982,10 @@ private:
 
     /** Returns the active word editor display. side-effects: none. */
     std::string renderConfiguredWord() const {
-        const std::string visible_word = configured_word_utf8_.empty() ? std::string(DEFAULT_WORD) : configured_word_utf8_;
-        if (hide_text_) {
-            return maskUtf8Text(visible_word);
+        if (hide_text_ && !configured_word_utf8_.empty()) {
+            return maskUtf8Text(configured_word_utf8_);
         }
-        return visible_word;
+        return configured_word_utf8_;
     }
 
     /** Returns the completion-rate percentage. side-effects: none. */
@@ -1022,7 +1010,7 @@ private:
 
     /** Renders one timing-stat field. side-effects: none. */
     std::string renderTimingStats() const {
-        if (statistics_.completion_times_seconds.empty()) {
+        if (statistics_.completion_times_seconds.empty() || getEffectiveTargetWord().empty()) {
             return "Best: - (-) | Median: - (-) | Last: - (-)";
         }
 
@@ -1081,7 +1069,6 @@ private:
 
         output_stream << "Target: " << renderWordDisplay() << "\n";
         output_stream << "Timer: " << formatFixed(getElapsedSeconds(), 2) << "s\n";
-        output_stream << "Input: " << renderInputBuffer() << "\n";
         output_stream << "Status: " << withStyle(getInputStatusStyle(), renderInputStatusLabel()) << "\n\n";
 
         output_stream << "Words Completed: " << statistics_.words_completed
